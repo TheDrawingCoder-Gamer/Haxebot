@@ -4,7 +4,6 @@ import commands.types.Duration;
 import systems.TextCommandBase;
 import components.TextCommand;
 import util.Random;
-import vm2.NodeVM;
 import js.node.Fs;
 import haxe.Http;
 import discord_js.TextChannel;
@@ -412,29 +411,36 @@ class Run extends TextCommandBase {
 							ls.kill('SIGTERM');
 							return;
 						}
-						var obj = null;
 
-						var vm = new NodeVM({
-							sandbox: obj,
-							console: 'redirect',
-							timeout: this.timeout,
+						final isolate = new isolated_vm.Isolate({});
+						
+						final context = isolate.createContextSync();
+
+						final jail = context.global;
+
+						jail.setSync('global', jail.derefInto());
+
+						jail.setSync('console', {
+							log: (data, info) -> {
+								var regex = ~/H[0-9]*..hx:[0-9]*.: (.*)/gm;
+								if (regex.match(data)) {
+									data = regex.matched(1);
+								}
+
+								if (info != null) {
+									response += '$info\n';
+								} else {
+									response += '$data\n';
+								}
+							}
 						});
 
-						vm.on('console.log', (data, info) -> {
-							var regex = ~/H[0-9]*..hx:[0-9]*.: (.*)/gm;
-							if (regex.match(data)) {
-								data = regex.matched(1);
-							}
 
-							if (info != null) {
-								response += '$info\n';
-							} else {
-								response += '$data\n';
-							}
-						});
 
 						try {
-							vm.run(sys.io.File.getContent(js_file));
+							context.evalSync(sys.io.File.getContent(js_file), {
+								timeout: this.timeout
+							});
 
 							var x = response.split('\n');
 							var truncated = false;

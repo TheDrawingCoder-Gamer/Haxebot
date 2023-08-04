@@ -1,7 +1,7 @@
 package commands;
 
 import discord_js.MessageEmbed;
-import vm2.NodeVM;
+import isolated_vm.Isolate;
 import sys.FileSystem;
 import js.node.Fs;
 import util.Random;
@@ -172,29 +172,31 @@ class Trace extends CommandBase {
 					if (!FileSystem.exists(js_file)) {
 						return trace('Code likely errored and didnt compile ($filename.js)');
 					}
-					var obj = null;
 
-					var vm = new NodeVM({
-						sandbox: obj,
-						console: 'redirect',
-						timeout: this.timeout,
-					});
+					final isolate = new Isolate({});
 
-					vm.on('console.log', (data, info) -> {
-						var regex = ~/T[0-9]*..hx:[0-9]*.: (.*)/gm;
-						if (regex.match(data)) {
-							data = regex.matched(1);
-						}
+					final context = isolate.createContextSync();
 
-						if (info != null) {
-							response += '$info\n';
-						} else {
-							response += '$data\n';
+					final jail = context.global;
+
+					jail.setSync('global', jail.derefInto());
+					jail.setSync('console', {
+						log: (data, info) -> {
+							var regex = ~/T[0-9]*..hx:[0-9]*.: (.*)/gm;
+							if (regex.match(data)) {
+								data = regex.matched(1);
+							}
+
+							if (info != null) {
+								response += '$info\n';
+							} else {
+								response += '$data\n';
+							}
 						}
 					});
 
 					try {
-						vm.run(sys.io.File.getContent(js_file));
+						context.evalSync(sys.io.File.getContent(js_file), {timeout: this.timeout});
 
 						var x = response.split('\n');
 						var truncated = false;

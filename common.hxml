@@ -1,7 +1,7 @@
 -cp src
 -D analyzer-optimize
 --library safety
---library vm2
+--library isolated-vm
 --library node-html-parser
 --library aidan-ecs
 --library hxnodejs

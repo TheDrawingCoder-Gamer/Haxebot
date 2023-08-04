@@ -6,7 +6,9 @@ import components.TextCommand;
 import discord_builder.SlashCommandSubcommandBuilder;
 import discord_js.GuildMember;
 import discord_js.PermissionFlags;
+#if !no_firebase
 import firebase.web.auth.Auth;
+#end
 import haxe.Rest;
 import discord_api_types.Routes;
 import discord_js.rest.REST;
@@ -36,7 +38,9 @@ import sys.io.File;
 import ecs.Universe;
 import haxe.Timer;
 import commands.*;
+#if !no_firebase
 import firebase.web.app.FirebaseApp;
+#end
 import js.lib.Promise;
 import commands.AutoRole;
 import commands.mod.Social;
@@ -468,6 +472,7 @@ class Main {
 		}
 
 		Main.app = FirebaseApp.initializeApp(keys.firebase);
+		#if !no_firebase
 		Auth.signInWithEmailAndPassword(Auth.getAuth(), keys.username, keys.password)
 			.then(function(res) {
 				trace('logged in');
@@ -484,7 +489,7 @@ class Main {
 					Browser.console.dir(err);
 				});
 			});
-
+		#end
 		start();
 	}
 
